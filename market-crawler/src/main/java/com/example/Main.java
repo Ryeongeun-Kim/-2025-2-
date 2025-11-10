@@ -41,6 +41,6 @@ public class Main {
             }
         }
 
-        System.out.println("✅ 모든 fetch 완료, CSV 및 차트 저장됨");
+        System.out.println("모든 fetch 완료, CSV 및 차트 저장됨");
     }
 }
