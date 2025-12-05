@@ -7,13 +7,14 @@ import org.json.JSONObject;
 public class DataFetcher {
 
     public static double fetch(String symbol) {
+
         try {
             String url = "https://query1.finance.yahoo.com/v8/finance/chart/" + symbol;
 
             Document doc = Jsoup.connect(url)
                     .ignoreContentType(true)
-                    .userAgent("Mozilla/5.0")
                     .timeout(7000)
+                    .userAgent("Mozilla/5.0")
                     .get();
 
             JSONObject json = new JSONObject(doc.text());
