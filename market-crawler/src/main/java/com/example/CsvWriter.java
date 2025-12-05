@@ -1,29 +1,54 @@
 package com.example;
 
+import javax.swing.*;
 import java.io.*;
 import java.nio.file.*;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
 public class CsvWriter {
 
-    private static final Path folder = Paths.get("data");
+    private static final Path FOLDER = Paths.get("data");
 
-    public static void saveToCsv(Map<String, List<Double>> data) throws IOException {
-        if (!Files.exists(folder)) Files.createDirectories(folder);
+    public static void saveAll(Map<String, List<Double>> history) {
 
-        for (String key : data.keySet()) {
-            Path file = folder.resolve(key + ".csv");
-            boolean append = Files.exists(file); // 이미 있으면 이어쓰기
+        try {
+            if (!Files.exists(FOLDER)) Files.createDirectories(FOLDER);
 
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(file.toFile(), append))) {
-                if (!append) writer.write("Timestamp,Price\n"); // 헤더 한 번만 작성
+            for (String symbol : history.keySet()) {
 
-                List<Double> values = data.get(key);
-                for (Double price : values) {
-                    writer.write(LocalDateTime.now() + "," + price + "\n");
+                Path file = FOLDER.resolve(symbol + ".csv");
+
+                try (BufferedWriter bw = new BufferedWriter(new FileWriter(file.toFile()))) {
+
+                    bw.write("timestamp,price\n");
+
+                    List<Double> values = history.get(symbol);
+
+                    for (Double price : values) {
+                        bw.write(LocalDateTime.now() + "," + price + "\n");
+                    }
                 }
             }
+
+            //CSV 저장 성공 팝업
+            JOptionPane.showMessageDialog(
+                    null,
+                    "CSV 저장 완료!\n폴더 위치: " + FOLDER.toAbsolutePath(),
+                    "CSV 저장 성공",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+
+        } catch (Exception e) {
+
+            //오류 시 팝업
+            JOptionPane.showMessageDialog(
+                    null,
+                    "CSV 저장 실패: " + e.getMessage(),
+                    "오류",
+                    JOptionPane.ERROR_MESSAGE
+            );
         }
     }
 }
