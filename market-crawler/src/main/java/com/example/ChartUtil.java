@@ -6,7 +6,8 @@ import org.knowm.xchart.style.markers.None;
 import javax.swing.*;
 import java.io.File;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Date;
+import java.util.List;
 
 public class ChartUtil {
 
@@ -16,13 +17,16 @@ public class ChartUtil {
     public ChartUtil() {
 
         chart = new XYChartBuilder()
-                .width(900).height(600)
+                .width(900)
+                .height(600)
                 .title("Realtime Market Chart")
-                .xAxisTitle("Fetch #")
+                .xAxisTitle("Time")
                 .yAxisTitle("Price")
                 .build();
 
         chart.getStyler().setLegendVisible(true);
+        chart.getStyler().setDatePattern("HH:mm:ss");
+        chart.getStyler().setXAxisLabelRotation(45);
         chart.getStyler().setYAxisDecimalPattern("#,###.##");
 
         chartPanel = new XChartPanel<>(chart);
@@ -43,50 +47,46 @@ public class ChartUtil {
     }
 
     public void addSeries(String symbol, String displayName) {
+    }
+
+    public void removeSeries(String symbol, String displayName) {
         SwingUtilities.invokeLater(() -> {
             try {
                 String key = seriesKey(symbol, displayName);
-                chart.addSeries(key, new double[]{}, new double[]{}).setMarker(new None());
+                chart.getSeriesMap().remove(key);
                 chartPanel.revalidate();
                 chartPanel.repaint();
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                System.err.println("Failed to remove series: " + e.getMessage());
+            }
         });
     }
 
-    public void removeSeries(String symbol) {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                chart.getSeriesMap().entrySet().removeIf(e -> e.getKey().contains(symbol));
-                chartPanel.revalidate();
-                chartPanel.repaint();
-            } catch (Exception ignored) {}
-        });
-    }
-
-    public void updateSeries(String symbol, String displayName, List<Double> values) {
+    public void updateSeries(String symbol,
+                             String displayName,
+                             List<Date> times,
+                             List<Double> prices) {
 
         SwingUtilities.invokeLater(() -> {
             try {
-                double[] x = new double[values.size()];
-                double[] y = new double[values.size()];
-
-                for (int i = 0; i < values.size(); i++) {
-                    x[i] = i + 1;
-                    y[i] = values.get(i);
-                }
+                if (times == null || prices == null) return;
+                if (times.isEmpty() || prices.isEmpty()) return;
 
                 String key = seriesKey(symbol, displayName);
 
                 if (chart.getSeriesMap().containsKey(key)) {
-                    chart.updateXYSeries(key, x, y, null);
+                    chart.updateXYSeries(key, times, prices, null);
                 } else {
-                    chart.addSeries(key, x, y).setMarker(new None());
+                    XYSeries s = chart.addSeries(key, times, prices);
+                    s.setMarker(new None());
                 }
 
                 chartPanel.revalidate();
                 chartPanel.repaint();
 
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                System.err.println("Chart update failed: " + e.getMessage());
+            }
         });
     }
 
@@ -100,11 +100,20 @@ public class ChartUtil {
 
             BitmapEncoder.saveBitmap(chart, file.getAbsolutePath(), BitmapEncoder.BitmapFormat.PNG);
 
-            JOptionPane.showMessageDialog(null,
-                    "차트 이미지 저장 완료:\n" + file.getAbsolutePath());
+            JOptionPane.showMessageDialog(
+                    null,
+                    "차트 이미지 저장 완료\n폴더 위치: " + file.getAbsolutePath(),
+                    "저장 성공",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
 
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "저장 실패: " + e.getMessage());
+            JOptionPane.showMessageDialog(
+                    null,
+                    "저장 실패: " + e.getMessage(),
+                    "오류",
+                    JOptionPane.ERROR_MESSAGE
+            );
         }
     }
 }

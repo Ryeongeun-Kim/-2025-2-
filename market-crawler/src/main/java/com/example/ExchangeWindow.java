@@ -8,6 +8,7 @@ public class ExchangeWindow extends JFrame {
 
     private final List<String> symbols = new ArrayList<>();
     private final Map<String, List<Double>> priceHistory = new HashMap<>();
+    private final Map<String, List<Date>> timeHistory = new HashMap<>();
     private final Map<String, String> displayNames = new HashMap<>();
 
     private final ChartUtil chartUtil = new ChartUtil();
@@ -17,24 +18,26 @@ public class ExchangeWindow extends JFrame {
         setTitle("Realtime Exchange Rate Viewer");
         setSize(800, 400);
         setLayout(new BorderLayout());
-        setLocation(300, 80);
 
         String symbol = "USDKRW=X";
-        String display = "환율 USD→KRW";
-
         symbols.add(symbol);
         priceHistory.put(symbol, new ArrayList<>());
-        displayNames.put(symbol, display);
+        timeHistory.put(symbol, new ArrayList<>());
+        displayNames.put(symbol, "환율 USD→KRW");
 
-        chartUtil.addSeries(symbol, display);
-
+        chartUtil.addSeries(symbol, "환율 USD→KRW");
         add(chartUtil.getChartPanel(), BorderLayout.CENTER);
-
         setVisible(true);
     }
 
     public void startFetching() {
-        FetcherThread th = new FetcherThread(symbols, priceHistory, displayNames, chartUtil);
+        FetcherThread th = new FetcherThread(
+                symbols,
+                priceHistory,
+                timeHistory,
+                displayNames,
+                chartUtil
+        );
         th.setDaemon(true);
         th.start();
     }

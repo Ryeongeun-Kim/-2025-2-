@@ -2,10 +2,9 @@ package com.example;
 
 import javax.swing.*;
 import java.awt.BorderLayout;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class MainWindow extends JFrame {
 
@@ -15,8 +14,11 @@ public class MainWindow extends JFrame {
     private JButton saveChartButton;
     private JButton saveCsvButton;
 
-    private final List<String> symbols = new ArrayList<>();
+    // 스레드가 순회하는 중(UI에서 add/remove)에도 안전하도록 CopyOnWriteArrayList 사용
+    private final List<String> symbols = new CopyOnWriteArrayList<>();
+
     private final Map<String, List<Double>> priceHistory = new ConcurrentHashMap<>();
+    private final Map<String, List<Date>> timeHistory = new ConcurrentHashMap<>();
     private final Map<String, String> displayNames = new ConcurrentHashMap<>();
 
     private final ChartUtil chartUtil = new ChartUtil();
@@ -31,7 +33,6 @@ public class MainWindow extends JFrame {
         setLayout(new BorderLayout());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        // ----------------- 상단 입력 -----------------
         JPanel top = new JPanel();
         inputField = new JTextField(20);
         addButton = new JButton("종목 추가");
@@ -48,15 +49,12 @@ public class MainWindow extends JFrame {
         inputField.addActionListener(e -> addSymbol());
         removeButton.addActionListener(e -> removeSymbol());
 
-        // ----------------- 좌측 리스트 -----------------
         JScrollPane scroll = new JScrollPane(symbolList);
         scroll.setPreferredSize(new java.awt.Dimension(180, 0));
         add(scroll, BorderLayout.WEST);
 
-        // ----------------- 중앙 차트 -----------------
         add(chartUtil.getChartPanel(), BorderLayout.CENTER);
 
-        // ----------------- 하단 저장 버튼 -----------------
         JPanel bottom = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT));
         saveChartButton = new JButton("차트 이미지 저장");
         saveCsvButton = new JButton("CSV 저장");
@@ -65,7 +63,7 @@ public class MainWindow extends JFrame {
         bottom.add(saveCsvButton);
 
         saveChartButton.addActionListener(e -> chartUtil.saveChartImage());
-        saveCsvButton.addActionListener(e -> CsvWriter.saveAll(priceHistory));
+        saveCsvButton.addActionListener(e -> CsvWriter.saveAll(timeHistory, priceHistory));
 
         add(bottom, BorderLayout.SOUTH);
 
@@ -74,9 +72,10 @@ public class MainWindow extends JFrame {
 
     private void addSymbol() {
         String input = inputField.getText().trim();
+
         if (input.isEmpty()) {
             JOptionPane.showMessageDialog(this,
-                    "추가에 실패하였습니다. 다시 입력해주세요.",
+                    "종목명 혹은 종목코드를 입력해주세요.",
                     "추가 실패",
                     JOptionPane.ERROR_MESSAGE);
             return;
@@ -103,19 +102,18 @@ public class MainWindow extends JFrame {
         // 정상 추가 처리
         symbols.add(symbol);
         priceHistory.put(symbol, new ArrayList<>());
+        timeHistory.put(symbol, new ArrayList<>());
         displayNames.put(symbol, input);
-        listModel.addElement(input + " (" + symbol + ")");
 
+        listModel.addElement(input + " (" + symbol + ")");
         chartUtil.addSeries(symbol, input);
         inputField.setText("");
 
-        //성공 메시지 팝업
         JOptionPane.showMessageDialog(this,
                 "종목이 추가되었습니다.",
                 "추가 성공",
                 JOptionPane.INFORMATION_MESSAGE);
     }
-
 
     private void removeSymbol() {
 
@@ -145,22 +143,26 @@ public class MainWindow extends JFrame {
             return;
         }
 
+        String displayName = displayNames.get(symbol);
+
         symbols.remove(symbol);
         priceHistory.remove(symbol);
+        timeHistory.remove(symbol);
         displayNames.remove(symbol);
         listModel.removeElement(selected);
-        chartUtil.removeSeries(symbol);
 
-        //삭제 성공 메세지 팝업
+        if (displayName != null) {
+            chartUtil.removeSeries(symbol, displayName);
+        }
+
         JOptionPane.showMessageDialog(this,
                 "종목이 삭제되었습니다.",
                 "삭제 성공",
                 JOptionPane.INFORMATION_MESSAGE);
     }
 
-
     public void startFetching() {
-        FetcherThread th = new FetcherThread(symbols, priceHistory, displayNames, chartUtil);
+        FetcherThread th = new FetcherThread(symbols, priceHistory, timeHistory, displayNames, chartUtil);
         th.setDaemon(true);
         th.start();
     }
