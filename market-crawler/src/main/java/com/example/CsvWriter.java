@@ -39,7 +39,7 @@ public class CsvWriter {
                 }
             }
 
-            // CSV 저장 성공 팝업(유지)
+            // CSV 저장 성공 팝업
             JOptionPane.showMessageDialog(
                     null,
                     "CSV 저장 완료\n폴더 위치: " + FOLDER.toAbsolutePath(),
@@ -48,7 +48,7 @@ public class CsvWriter {
             );
 
         } catch (Exception e) {
-            // CSV 저장 실패 팝업(유지)
+            // CSV 저장 실패 팝업
             JOptionPane.showMessageDialog(
                     null,
                     "CSV 저장 실패: " + e.getMessage(),
